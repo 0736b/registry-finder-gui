@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"fmt"
+	"log"
 	"slices"
 
 	"github.com/0736b/registry-finder-gui/models"
@@ -20,32 +21,120 @@ func NewRegistryRepository() *RegistryRepositoryImpl {
 }
 
 func (rr *RegistryRepositoryImpl) StreamRegistry() <-chan models.Registry {
-	return nil
+
+	fromHKCR := generateRegistryByKey(registry.CLASSES_ROOT)
+	fromHKCU := generateRegistryByKey(registry.CURRENT_USER)
+	fromHKLM := generateRegistryByKey(registry.LOCAL_MACHINE)
+	fromHKCC := generateRegistryByKey(registry.CURRENT_CONFIG)
+	fromHKU := generateRegistryByKey(registry.USERS)
+
+	results := fanInRegistry(fromHKCR, fromHKCU, fromHKLM, fromHKCC, fromHKU)
+
+	return results
 }
 
-func (rr *RegistryRepositoryImpl) generateRegistryByKey(key *registry.Key) <-chan models.Registry {
-	return nil
+func fanInRegistry(hkcr, hkcu, hklm, hkcc, hku <-chan models.Registry) <-chan models.Registry {
+
+	resultsChan := make(chan models.Registry)
+
+	go func() {
+		for {
+			select {
+			case reg := <-hkcr:
+				resultsChan <- reg
+			case reg := <-hkcu:
+				resultsChan <- reg
+			case reg := <-hklm:
+				resultsChan <- reg
+			case reg := <-hkcc:
+				resultsChan <- reg
+			case reg := <-hku:
+				resultsChan <- reg
+			}
+		}
+	}()
+
+	return resultsChan
 }
 
-func (rr *RegistryRepositoryImpl) fanInRegistry(hkcr, hkcu, hklm, hkcc, hku <-chan models.Registry) <-chan models.Registry {
-	return nil
+func generateRegistryByKey(key registry.Key) <-chan models.Registry {
+
+	regChan := make(chan models.Registry)
+
+	hkey, _ := registry.OpenKey(key, "", registry.READ)
+	defer hkey.Close()
+
+	go queryEnumKeys(hkey, utils.KeyToString(key), regChan)
+
+	return regChan
 }
 
-func (rr *RegistryRepositoryImpl) queryEnumKeys(hkey registry.Key, path string) <-chan models.Registry {
-	return nil
+func queryEnumKeys(hkey registry.Key, path string, regChan chan models.Registry) {
+
+	hkeyStat, err := hkey.Stat()
+	if err != nil {
+		return
+	}
+
+	if hkeyStat.SubKeyCount == 0 {
+		queryEnumValues(hkey, path, regChan)
+	}
+
+	subKeys, err := hkey.ReadSubKeyNames(-1)
+	if err != nil {
+		return
+	}
+
+	queryEnumValues(hkey, path, regChan)
+
+	for _, subkey := range subKeys {
+		_hkey, _ := registry.OpenKey(hkey, subkey, registry.READ)
+		defer _hkey.Close()
+		queryEnumKeys(_hkey, path+"\\"+subkey, regChan)
+	}
+
 }
 
-func (rr *RegistryRepositoryImpl) queryEnumValues(hkey registry.Key, path string) <-chan models.Registry {
-	return nil
+func queryEnumValues(hkey registry.Key, path string, regChan chan models.Registry) {
+
+	hkeyStat, err := hkey.Stat()
+	if err != nil {
+		log.Println("queryEnumValues failed to get stat", err.Error())
+	}
+
+	if hkeyStat.ValueCount == 0 {
+		regChan <- models.Registry{Path: path, ValueName: "", ValueType: "", Value: ""}
+		return
+	}
+
+	valNames, err := hkey.ReadValueNames(-1)
+	if err != nil {
+		log.Println("queryEnumValues failed to get names", err.Error())
+		return
+	}
+
+	regChan <- models.Registry{Path: path, ValueName: "", ValueType: "", Value: ""}
+
+	for _, name := range valNames {
+
+		val, valType, err := queryValue(hkey, name)
+		if err != nil {
+			log.Println("QueryEnumValues failed to query value", err.Error())
+			return
+		}
+
+		regChan <- models.Registry{Path: path, ValueName: name, ValueType: valType, Value: val}
+	}
+
 }
 
-func (rr *RegistryRepositoryImpl) queryValue(hkey registry.Key, name string) (string, string, error) {
+func queryValue(hkey registry.Key, name string) (string, string, error) {
 
 	value := make([]byte, 1024)
 
 	n, valtype, err := hkey.GetValue(name, value)
 	if err != nil {
-		return "", "", fmt.Errorf("QueryValue error: %w", err)
+		return "", "", fmt.Errorf("QueryValue failed to get value: %w", err)
 	}
 
 	value = value[:n]
@@ -93,5 +182,5 @@ func (rr *RegistryRepositoryImpl) queryValue(hkey registry.Key, name string) (st
 
 	}
 
-	return "", "", fmt.Errorf("QueryValue error: %w", err)
+	return "", "", fmt.Errorf("queryValue error: %w", err)
 }
