@@ -1,11 +1,17 @@
 package usecases
 
 import (
-	"github.com/0736b/registry-finder-gui/models"
+	"github.com/0736b/registry-finder-gui/entities"
 	"github.com/0736b/registry-finder-gui/repositories"
 )
 
-type RegistryUsecase interface{}
+type RegistryUsecase interface {
+	StreamRegistry() <-chan entities.Registry
+	FilterByKeyword(reg entities.Registry, keyword string) bool
+	FilterByKey(reg entities.Registry, filterKey string) bool
+	FilterByType(reg entities.Registry, filterType string) bool
+	OpenInRegedit(reg entities.Registry)
+}
 
 type RegistryUsecaseImpl struct {
 	registryRepository repositories.RegistryRepository
@@ -21,18 +27,22 @@ func NewRegistryUsecase() *RegistryUsecaseImpl {
 	return &RegistryUsecaseImpl{registryRepository: singletonRegistryRepository}
 }
 
-func (rs *RegistryUsecaseImpl) StreamRegistry() <-chan models.Registry {
-	return rs.registryRepository.StreamRegistry()
+func (u *RegistryUsecaseImpl) StreamRegistry() <-chan entities.Registry {
+	return u.registryRepository.StreamRegistry()
 }
 
-func (rs *RegistryUsecaseImpl) FilterByKeyword(reg models.Registry, keyword string) bool {
+func (u *RegistryUsecaseImpl) FilterByKeyword(reg entities.Registry, keyword string) bool {
 	return true
 }
 
-func (rs *RegistryUsecaseImpl) FilterByKey(reg models.Registry, filterKey string) bool {
+func (u *RegistryUsecaseImpl) FilterByKey(reg entities.Registry, filterKey string) bool {
 	return true
 }
 
-func (rs *RegistryUsecaseImpl) FilterByType(reg models.Registry, filterType string) bool {
+func (u *RegistryUsecaseImpl) FilterByType(reg entities.Registry, filterType string) bool {
 	return true
+}
+
+func (u *RegistryUsecaseImpl) OpenInRegedit(reg entities.Registry) {
+
 }

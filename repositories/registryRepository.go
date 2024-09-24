@@ -5,13 +5,13 @@ import (
 	"log"
 	"slices"
 
-	"github.com/0736b/registry-finder-gui/models"
+	"github.com/0736b/registry-finder-gui/entities"
 	"github.com/0736b/registry-finder-gui/utils"
 	"golang.org/x/sys/windows/registry"
 )
 
 type RegistryRepository interface {
-	StreamRegistry() <-chan models.Registry
+	StreamRegistry() <-chan entities.Registry
 }
 
 type RegistryRepositoryImpl struct{}
@@ -20,7 +20,7 @@ func NewRegistryRepository() *RegistryRepositoryImpl {
 	return &RegistryRepositoryImpl{}
 }
 
-func (rr *RegistryRepositoryImpl) StreamRegistry() <-chan models.Registry {
+func (r *RegistryRepositoryImpl) StreamRegistry() <-chan entities.Registry {
 
 	fromHKCR := generateRegistryByKey(registry.CLASSES_ROOT)
 	fromHKCU := generateRegistryByKey(registry.CURRENT_USER)
@@ -33,9 +33,9 @@ func (rr *RegistryRepositoryImpl) StreamRegistry() <-chan models.Registry {
 	return results
 }
 
-func fanInRegistry(hkcr, hkcu, hklm, hkcc, hku <-chan models.Registry) <-chan models.Registry {
+func fanInRegistry(hkcr, hkcu, hklm, hkcc, hku <-chan entities.Registry) <-chan entities.Registry {
 
-	resultsChan := make(chan models.Registry)
+	resultsChan := make(chan entities.Registry)
 
 	go func() {
 		for {
@@ -57,9 +57,9 @@ func fanInRegistry(hkcr, hkcu, hklm, hkcc, hku <-chan models.Registry) <-chan mo
 	return resultsChan
 }
 
-func generateRegistryByKey(key registry.Key) <-chan models.Registry {
+func generateRegistryByKey(key registry.Key) <-chan entities.Registry {
 
-	regChan := make(chan models.Registry)
+	regChan := make(chan entities.Registry)
 
 	hkey, _ := registry.OpenKey(key, "", registry.READ)
 	defer hkey.Close()
@@ -69,7 +69,7 @@ func generateRegistryByKey(key registry.Key) <-chan models.Registry {
 	return regChan
 }
 
-func queryEnumKeys(hkey registry.Key, path string, regChan chan models.Registry) {
+func queryEnumKeys(hkey registry.Key, path string, regChan chan entities.Registry) {
 
 	hkeyStat, err := hkey.Stat()
 	if err != nil {
@@ -95,7 +95,7 @@ func queryEnumKeys(hkey registry.Key, path string, regChan chan models.Registry)
 
 }
 
-func queryEnumValues(hkey registry.Key, path string, regChan chan models.Registry) {
+func queryEnumValues(hkey registry.Key, path string, regChan chan entities.Registry) {
 
 	hkeyStat, err := hkey.Stat()
 	if err != nil {
@@ -103,7 +103,7 @@ func queryEnumValues(hkey registry.Key, path string, regChan chan models.Registr
 	}
 
 	if hkeyStat.ValueCount == 0 {
-		regChan <- models.Registry{Path: path, ValueName: "", ValueType: "", Value: ""}
+		regChan <- entities.Registry{Path: path, ValueName: "", ValueType: "", Value: ""}
 		return
 	}
 
@@ -113,7 +113,7 @@ func queryEnumValues(hkey registry.Key, path string, regChan chan models.Registr
 		return
 	}
 
-	regChan <- models.Registry{Path: path, ValueName: "", ValueType: "", Value: ""}
+	regChan <- entities.Registry{Path: path, ValueName: "", ValueType: "", Value: ""}
 
 	for _, name := range valNames {
 
@@ -123,7 +123,7 @@ func queryEnumValues(hkey registry.Key, path string, regChan chan models.Registr
 			return
 		}
 
-		regChan <- models.Registry{Path: path, ValueName: name, ValueType: valType, Value: val}
+		regChan <- entities.Registry{Path: path, ValueName: name, ValueType: valType, Value: val}
 	}
 
 }
