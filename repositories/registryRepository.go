@@ -47,12 +47,6 @@ func fanInGenerate(genChans ...<-chan *entities.Registry) <-chan *entities.Regis
 			}
 			streamChan <- reg
 		}
-		// if gen != nil {
-		// 	for reg := range gen {
-		// 		streamChan <- reg
-		// 	}
-		// 	gen = nil
-		// }
 	}
 
 	wg.Add(len(genChans))
@@ -64,63 +58,6 @@ func fanInGenerate(genChans ...<-chan *entities.Registry) <-chan *entities.Regis
 		wg.Wait()
 		close(streamChan)
 	}()
-
-	// go func() {
-
-	// 	defer close(streamChan)
-
-	// 	for _, gen := range genChan {
-
-	// 		if gen != nil {
-
-	// 			reg, ok := <-gen
-	// 			if !ok {
-	// 				gen = nil
-	// 			}
-	// 			streamChan <- reg
-
-	// 		}
-
-	// 	}
-
-	// for hkcr != nil || hkcu != nil || hklm != nil || hkcc != nil || hku != nil {
-
-	// 	select {
-
-	// 	case reg, ok := <-hkcr:
-	// 		if !ok {
-	// 			hkcr = nil
-	// 		}
-	// 		streamChan <- reg
-
-	// 	case reg, ok := <-hkcu:
-	// 		if !ok {
-	// 			hkcu = nil
-	// 		}
-	// 		streamChan <- reg
-
-	// 	case reg, ok := <-hklm:
-	// 		if !ok {
-	// 			hklm = nil
-	// 		}
-	// 		streamChan <- reg
-
-	// 	case reg, ok := <-hkcc:
-	// 		if !ok {
-	// 			hkcc = nil
-	// 		}
-	// 		streamChan <- reg
-
-	// 	case reg, ok := <-hku:
-	// 		if !ok {
-	// 			hku = nil
-	// 		}
-	// 		streamChan <- reg
-
-	// 	}
-	// }
-
-	// }()
 
 	return streamChan
 }
