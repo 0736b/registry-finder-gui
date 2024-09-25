@@ -18,7 +18,7 @@ const (
 	APP_WIDTH  int    = 1000
 	APP_HEIGHT int    = 800
 
-	DEBOUNCE_INTERVAL time.Duration = 500 * time.Millisecond
+	DEBOUNCE_INTERVAL time.Duration = 250 * time.Millisecond
 	UPDATE_INTERVAL   time.Duration = 500 * time.Millisecond
 
 	COL_TITLE_PATH  string = "Path"
@@ -124,6 +124,7 @@ func (app *AppWindow) processingShowResult() {
 	var currKeyword string = ""
 
 	for {
+
 		select {
 		case newKeyword := <-app.keywordChan:
 			prevKeyword = currKeyword
@@ -153,6 +154,7 @@ func (app *AppWindow) processingShowResult() {
 			}
 
 		}()
+
 	}
 
 }
@@ -178,13 +180,6 @@ func (app *AppWindow) updateTable(invalidate bool) {
 
 		app.showedResultMu.Lock()
 		defer app.showedResultMu.Unlock()
-
-		// app.showedResultMu.Lock()
-		// app.regTableModel.Items = app.showedResult
-		// log.Println("updateTable Items:", len(app.regTableModel.Items))
-		// app.showedResultMu.Unlock()
-
-		// app.regTableModel.PublishRowsReset()
 
 		if invalidate {
 			app.regTableModel.Items = app.showedResult
