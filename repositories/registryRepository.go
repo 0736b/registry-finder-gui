@@ -3,6 +3,7 @@ package repositories
 import (
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/0736b/registry-finder-gui/entities"
 	"github.com/0736b/registry-finder-gui/utils"
@@ -21,79 +22,118 @@ func NewRegistryRepository() *RegistryRepositoryImpl {
 
 func (r *RegistryRepositoryImpl) StreamRegistry() <-chan *entities.Registry {
 
-	fromHKCR := generateRegistryByKey(registry.CLASSES_ROOT)
-	fromHKCU := generateRegistryByKey(registry.CURRENT_USER)
-	fromHKLM := generateRegistryByKey(registry.LOCAL_MACHINE)
-	fromHKCC := generateRegistryByKey(registry.CURRENT_CONFIG)
-	fromHKU := generateRegistryByKey(registry.USERS)
+	genByHKCR := generateRegByKey(registry.CLASSES_ROOT)
+	genByHKCU := generateRegByKey(registry.CURRENT_USER)
+	genByHKLM := generateRegByKey(registry.LOCAL_MACHINE)
+	genByHKCC := generateRegByKey(registry.CURRENT_CONFIG)
+	genByHKU := generateRegByKey(registry.USERS)
 
-	results := fanInRegistry(fromHKCR, fromHKCU, fromHKLM, fromHKCC, fromHKU)
+	stream := fanInGenerate(genByHKCR, genByHKCU, genByHKLM, genByHKCC, genByHKU)
 
-	return results
+	return stream
 }
 
-func fanInRegistry(hkcr, hkcu, hklm, hkcc, hku <-chan *entities.Registry) <-chan *entities.Registry {
+func fanInGenerate(genChans ...<-chan *entities.Registry) <-chan *entities.Registry {
 
-	resultsChan := make(chan *entities.Registry)
+	var wg sync.WaitGroup
+	streamChan := make(chan *entities.Registry)
+
+	fanIn := func(gen <-chan *entities.Registry) {
+		defer wg.Done()
+		for gen != nil {
+			reg, ok := <-gen
+			if !ok {
+				gen = nil
+			}
+			streamChan <- reg
+		}
+		// if gen != nil {
+		// 	for reg := range gen {
+		// 		streamChan <- reg
+		// 	}
+		// 	gen = nil
+		// }
+	}
+
+	wg.Add(len(genChans))
+	for _, gen := range genChans {
+		go fanIn(gen)
+	}
 
 	go func() {
-
-		defer close(resultsChan)
-
-		for hkcr != nil || hkcu != nil || hklm != nil || hkcc != nil || hku != nil {
-
-			select {
-
-			case reg, ok := <-hkcr:
-				if !ok {
-					hkcr = nil
-				}
-				resultsChan <- reg
-
-			case reg, ok := <-hkcu:
-				if !ok {
-					hkcu = nil
-				}
-				resultsChan <- reg
-
-			case reg, ok := <-hklm:
-				if !ok {
-					hklm = nil
-				}
-				resultsChan <- reg
-
-			case reg, ok := <-hkcc:
-				if !ok {
-					hkcc = nil
-				}
-				resultsChan <- reg
-
-			case reg, ok := <-hku:
-				if !ok {
-					hku = nil
-				}
-				resultsChan <- reg
-
-			}
-		}
-
+		wg.Wait()
+		close(streamChan)
 	}()
 
-	return resultsChan
+	// go func() {
+
+	// 	defer close(streamChan)
+
+	// 	for _, gen := range genChan {
+
+	// 		if gen != nil {
+
+	// 			reg, ok := <-gen
+	// 			if !ok {
+	// 				gen = nil
+	// 			}
+	// 			streamChan <- reg
+
+	// 		}
+
+	// 	}
+
+	// for hkcr != nil || hkcu != nil || hklm != nil || hkcc != nil || hku != nil {
+
+	// 	select {
+
+	// 	case reg, ok := <-hkcr:
+	// 		if !ok {
+	// 			hkcr = nil
+	// 		}
+	// 		streamChan <- reg
+
+	// 	case reg, ok := <-hkcu:
+	// 		if !ok {
+	// 			hkcu = nil
+	// 		}
+	// 		streamChan <- reg
+
+	// 	case reg, ok := <-hklm:
+	// 		if !ok {
+	// 			hklm = nil
+	// 		}
+	// 		streamChan <- reg
+
+	// 	case reg, ok := <-hkcc:
+	// 		if !ok {
+	// 			hkcc = nil
+	// 		}
+	// 		streamChan <- reg
+
+	// 	case reg, ok := <-hku:
+	// 		if !ok {
+	// 			hku = nil
+	// 		}
+	// 		streamChan <- reg
+
+	// 	}
+	// }
+
+	// }()
+
+	return streamChan
 }
 
-func generateRegistryByKey(key registry.Key) <-chan *entities.Registry {
+func generateRegByKey(key registry.Key) <-chan *entities.Registry {
 
 	regChan := make(chan *entities.Registry)
-	// defer close(regChan)
-	// log.Println("generateRegistryByKey regChan", &regChan)
 
 	hkey, err := registry.OpenKey(key, "", registry.READ)
 	if err != nil {
 		log.Println("generate failed", err.Error())
 		return nil
 	}
-	// defer hkey.Close()
 
 	go queryEnumKeys(&hkey, utils.KeyToString(key), regChan)
 
@@ -102,23 +142,13 @@ func generateRegistryByKey(key registry.Key) <-chan *entities.Registry {
 
 func queryEnumKeys(hkey *registry.Key, path string, regChan chan *entities.Registry) {
 
-	// log.Println("queryEnumKeys regChan", regChan)
-
-	// log.Println("queryEnumKeys", hkey)
-
 	_, err := hkey.Stat()
 	if err != nil {
-		// regChan = nil
 		return
 	}
 
-	// if hkeyStat.SubKeyCount == 0 {
-	// 	queryEnumValues(hkey, path, regChan)
-	// }
-
 	subKeys, err := hkey.ReadSubKeyNames(-1)
 	if err != nil {
-		// regChan = nil
 		return
 	}
 
@@ -126,7 +156,6 @@ func queryEnumKeys(hkey *registry.Key, path string, regChan chan *entities.Regis
 
 	for _, subkey := range subKeys {
 		_hkey, _ := registry.OpenKey(*hkey, subkey, registry.READ)
-		// defer _hkey.Close()
 		queryEnumKeys(&_hkey, path+"\\"+subkey, regChan)
 	}
 
@@ -163,8 +192,6 @@ func queryEnumValues(hkey *registry.Key, path string, regChan chan *entities.Reg
 
 		regChan <- &entities.Registry{Path: path, Name: name, Type: valType, Value: val}
 	}
-
-	// hkey.Close()
 
 }
 

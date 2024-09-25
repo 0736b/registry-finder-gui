@@ -9,9 +9,9 @@ import (
 
 func main() {
 
-	ru := usecases.NewRegistryUsecase()
+	usecase := usecases.NewRegistryUsecase()
 
-	app, err := gui.NewAppWindow(ru)
+	app, err := gui.NewAppWindow(usecase)
 	if err != nil {
 		log.Fatalln("failed to create app window", err.Error())
 	}
