@@ -7,7 +7,7 @@ import (
 
 type RegistryTableModel struct {
 	walk.TableModelBase
-	items []entities.Registry
+	Items []*entities.Registry
 }
 
 func NewRegistryTableModel() *RegistryTableModel {
@@ -18,20 +18,21 @@ func NewRegistryTableModel() *RegistryTableModel {
 }
 
 func (m *RegistryTableModel) RowCount() int {
-	return len(m.items)
+
+	return len(m.Items)
 }
 
 func (m *RegistryTableModel) Value(row, col int) interface{} {
 
-	item := m.items[row]
+	item := m.Items[row]
 
 	switch col {
 	case 0:
 		return item.Path
 	case 1:
-		return item.ValueName
+		return item.Name
 	case 2:
-		return item.ValueType
+		return item.Type
 	case 3:
 		return item.Value
 	}

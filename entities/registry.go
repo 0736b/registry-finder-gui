@@ -1,8 +1,8 @@
 package entities
 
 type Registry struct {
-	Path      string
-	ValueName string
-	ValueType string
-	Value     string
+	Path  string
+	Name  string
+	Type  string
+	Value string
 }

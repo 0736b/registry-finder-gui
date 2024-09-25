@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"strings"
 
 	"golang.org/x/sys/windows/registry"
 )
@@ -35,7 +36,7 @@ func BytesToString(b []byte) string {
 	if n == -1 {
 		n = len(b)
 	}
-	return string(b[:n])
+	return strings.ReplaceAll(string(b[:n]), "\x00", "") // clean unexpected null characters
 }
 
 func KeyToString(key registry.Key) string {

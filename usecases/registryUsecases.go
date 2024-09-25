@@ -6,7 +6,7 @@ import (
 )
 
 type RegistryUsecase interface {
-	StreamRegistry() <-chan entities.Registry
+	StreamRegistry() <-chan *entities.Registry
 	FilterByKeyword(reg entities.Registry, keyword string) bool
 	FilterByKey(reg entities.Registry, filterKey string) bool
 	FilterByType(reg entities.Registry, filterType string) bool
@@ -27,19 +27,23 @@ func NewRegistryUsecase() *RegistryUsecaseImpl {
 	return &RegistryUsecaseImpl{registryRepository: singletonRegistryRepository}
 }
 
-func (u *RegistryUsecaseImpl) StreamRegistry() <-chan entities.Registry {
+func (u *RegistryUsecaseImpl) StreamRegistry() <-chan *entities.Registry {
+
 	return u.registryRepository.StreamRegistry()
 }
 
 func (u *RegistryUsecaseImpl) FilterByKeyword(reg entities.Registry, keyword string) bool {
+
 	return true
 }
 
 func (u *RegistryUsecaseImpl) FilterByKey(reg entities.Registry, filterKey string) bool {
+
 	return true
 }
 
 func (u *RegistryUsecaseImpl) FilterByType(reg entities.Registry, filterType string) bool {
+
 	return true
 }
 
