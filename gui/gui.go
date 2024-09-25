@@ -26,6 +26,11 @@ const (
 	COL_TITLE_NAME  string = "Name"
 	COL_TITLE_TYPE  string = "Type"
 	COL_TITLE_VALUE string = "Value"
+
+	COL_WIDTH_PATH  float32 = 0.4
+	COL_WIDTH_NAME  float32 = 0.1
+	COL_WIDTH_TYPE  float32 = 0.1
+	COL_WIDTH_VALUE float32 = 0.4
 )
 
 type AppWindow struct {
@@ -55,6 +60,9 @@ func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 		Size:     Size{Width: APP_WIDTH, Height: APP_HEIGHT},
 		MinSize:  Size{Width: APP_WIDTH, Height: APP_HEIGHT},
 		Layout:   VBox{},
+		OnSizeChanged: func() {
+			app.handleOnSizeChanged()
+		},
 
 		Children: []Widget{
 			LineEdit{
@@ -67,17 +75,14 @@ func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 				AssignTo:         &app.resultTable,
 				AlternatingRowBG: true,
 				Columns: []TableViewColumn{
-					{Title: COL_TITLE_PATH, Width: int(40 * APP_WIDTH / 100)},
-					{Title: COL_TITLE_NAME, Width: int(10 * APP_WIDTH / 100)},
-					{Title: COL_TITLE_TYPE, Width: int(10 * APP_WIDTH / 100)},
-					{Title: COL_TITLE_VALUE, Width: int(40 * APP_WIDTH / 100)},
+					{Name: COL_TITLE_PATH, Title: COL_TITLE_PATH, Width: int(COL_WIDTH_PATH * float32(APP_WIDTH))},
+					{Name: COL_TITLE_NAME, Title: COL_TITLE_NAME, Width: int(COL_WIDTH_NAME * float32(APP_WIDTH))},
+					{Name: COL_TITLE_TYPE, Title: COL_TITLE_TYPE, Width: int(COL_WIDTH_TYPE * float32(APP_WIDTH))},
+					{Name: COL_TITLE_VALUE, Title: COL_TITLE_VALUE, Width: int(COL_WIDTH_VALUE * float32(APP_WIDTH))},
 				},
 				Model: app.regTableModel,
 				OnItemActivated: func() {
 					app.handleOnItemActivated()
-				},
-				OnSizeChanged: func() {
-					// TODO adjust value column's size by app's size
 				},
 			},
 		},
@@ -97,12 +102,7 @@ func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 func (app *AppWindow) streamingRegistry() {
 
 	for reg := range app.usecase.StreamRegistry() {
-		// log.Println(len(app.collectedResult))
-		// app.collectedResultMu.Lock()
 		app.collectedResult = append(app.collectedResult, reg)
-		// app.collectedResultMu.Unlock()
-		// log.Println(reg)
-		// log.Println(len(app.collectedResult))
 	}
 }
 
@@ -146,5 +146,16 @@ func (app *AppWindow) handleOnItemActivated() {
 
 	item := app.regTableModel.Items[index]
 	go app.usecase.OpenInRegedit(item)
+
+}
+
+func (app *AppWindow) handleOnSizeChanged() {
+
+	app.Synchronize(func() {
+		go app.resultTable.Columns().ByName(COL_TITLE_PATH).SetWidth(int(float32(app.Width()) * (COL_WIDTH_PATH)))
+		go app.resultTable.Columns().ByName(COL_TITLE_NAME).SetWidth(int(float32(app.Width()) * (COL_WIDTH_NAME)))
+		go app.resultTable.Columns().ByName(COL_TITLE_TYPE).SetWidth(int(float32(app.Width()) * (COL_WIDTH_TYPE)))
+		go app.resultTable.Columns().ByName(COL_TITLE_VALUE).SetWidth(int(float32(app.Width()) * (COL_WIDTH_VALUE)))
+	})
 
 }
