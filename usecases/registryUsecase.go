@@ -41,13 +41,21 @@ func (u *RegistryUsecaseImpl) FilterByKeyword(reg *entities.Registry, keyword st
 		return true
 	}
 
-	keyword = strings.ToLower(keyword)
-	keyword = strings.ReplaceAll(keyword, " ", "")
-	keyword = strings.TrimSpace(keyword)
+	keyword = strings.ToLower(strings.TrimSpace(strings.ReplaceAll(keyword, " ", "")))
 
-	info := reg.Path + " " + reg.Name + " " + reg.Value
+	if strings.Contains(strings.ToLower(strings.ReplaceAll(reg.Path, " ", "")), keyword) {
+		return true
+	}
 
-	return strings.Contains(info, keyword)
+	if strings.Contains(strings.ToLower(strings.ReplaceAll(reg.Name, " ", "")), keyword) {
+		return true
+	}
+
+	if strings.Contains(strings.ToLower(strings.ReplaceAll(reg.Value, " ", "")), keyword) {
+		return true
+	}
+
+	return false
 }
 
 func (u *RegistryUsecaseImpl) FilterByKey(reg *entities.Registry, filterKey string) bool {

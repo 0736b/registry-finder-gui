@@ -16,9 +16,8 @@
 - Improving UI to show value exactly the same we see in `Regedit`
 
 
-```
-go get github.com/akavel/rsrc
-rsrc -manifest .\registry-finder-gui.manifest -o rsrc.syso
+### Build
 
-go build -ldflags "-extldflags=-static -H windowsgui" .
+```
+go build -a -ldflags="-s -w -H windowsgui -extldflags '-O2'" .
 ```

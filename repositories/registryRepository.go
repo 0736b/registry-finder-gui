@@ -69,7 +69,7 @@ func generateRegByKey(key registry.Key) <-chan *entities.Registry {
 
 	hkey, err := registry.OpenKey(key, "", registry.READ)
 	if err != nil {
-		log.Println("generate failed", err.Error())
+		log.Println("generateRegByKey OpenKey failed", err.Error())
 		return nil
 	}
 
@@ -103,7 +103,7 @@ func queryEnumValues(hkey *registry.Key, path string, regChan chan *entities.Reg
 
 	hkeyStat, err := hkey.Stat()
 	if err != nil {
-		log.Println("queryEnumValues failed to get stat", err.Error())
+		log.Println("queryEnumValues Stat() failed", err.Error())
 	}
 
 	if hkeyStat.ValueCount == 0 {
@@ -113,7 +113,7 @@ func queryEnumValues(hkey *registry.Key, path string, regChan chan *entities.Reg
 
 	valNames, err := hkey.ReadValueNames(-1)
 	if err != nil {
-		log.Println("queryEnumValues failed to get names", err.Error())
+		log.Println("queryEnumValues ReadValueNames() failed", err.Error())
 		hkey.Close()
 		return
 	}
@@ -124,7 +124,7 @@ func queryEnumValues(hkey *registry.Key, path string, regChan chan *entities.Reg
 
 		val, valType, err := queryValue(hkey, name)
 		if err != nil {
-			log.Println("QueryEnumValues failed to query value", err.Error())
+			log.Println("QueryEnumValues queryValue failed", err.Error())
 			return
 		}
 
@@ -140,7 +140,7 @@ func queryValue(hkey *registry.Key, name string) (string, string, error) {
 
 	n, valType, err := hkey.GetValue(name, value)
 	if err != nil && err != registry.ErrShortBuffer {
-		return "", "", fmt.Errorf("QueryValue failed to get value: %w", err)
+		return "", "", fmt.Errorf("%w", err)
 	} else if err != nil && err == registry.ErrShortBuffer {
 		value = make([]byte, n)
 		hkey.GetValue(name, value)

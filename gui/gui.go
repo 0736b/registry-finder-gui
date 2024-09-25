@@ -40,7 +40,7 @@ type AppWindow struct {
 
 	showedResult   []*entities.Registry
 	showedResultMu sync.Mutex
-	updateShowed   chan struct{}
+	updateShowed   chan bool
 
 	debounce    *time.Timer
 	debounceMu  sync.Mutex
@@ -62,7 +62,9 @@ type AppWindow struct {
 func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 
 	app := &AppWindow{usecase: usecase, collectedResult: make([]*entities.Registry, 0), showedResult: make([]*entities.Registry, 0),
-		regTableModel: models.NewRegistryTableModel(), keywordChan: make(chan string), updateShowed: make(chan struct{}, 1)}
+		regTableModel: models.NewRegistryTableModel(), keywordChan: make(chan string), updateShowed: make(chan bool)}
+
+	var icon, _ = walk.NewIconFromResourceId(2)
 
 	mw := MainWindow{
 
@@ -102,6 +104,8 @@ func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 	if err := mw.Create(); err != nil {
 		return nil, err
 	}
+
+	_ = app.SetIcon(icon)
 
 	go app.streamingRegistry()
 
@@ -157,7 +161,7 @@ func (app *AppWindow) processingShowResult() {
 
 			if prevKeyword != keyword {
 				select {
-				case app.updateShowed <- struct{}{}:
+				case app.updateShowed <- true:
 					prevKeyword = keyword
 				default:
 				}
@@ -178,8 +182,8 @@ func (app *AppWindow) updatingTable() {
 		select {
 		case <-ticker.C:
 			app.updateTable(false)
-		case <-app.updateShowed:
-			app.updateTable(true)
+		case inv := <-app.updateShowed:
+			app.updateTable(inv)
 		}
 	}
 }
