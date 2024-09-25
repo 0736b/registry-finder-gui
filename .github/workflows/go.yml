@@ -31,7 +31,7 @@ jobs:
       run: go-winres make .
 
     - name: Build Executable
-      run: go build -o registry-finder-gui.exe -ldflags="-H windowsgui" .
+      run: go build -a -o registry-finder-gui.exe -ldflags="-s -w -H windowsgui -extldflags '-O2'" .
 
     - name: Upload Build
       uses: actions/upload-artifact@v4
