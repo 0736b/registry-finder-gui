@@ -74,7 +74,7 @@ func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 				},
 				Model: app.regTableModel,
 				OnItemActivated: func() {
-					// TODO double-clicked to open regedit at item's key path
+					app.handleOnItemActivated()
 				},
 				OnSizeChanged: func() {
 					// TODO adjust value column's size by app's size
@@ -87,14 +87,14 @@ func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 		return nil, err
 	}
 
-	go app.StreamingRegistry()
+	go app.streamingRegistry()
 
-	go app.UpdatingTable()
+	go app.updatingTable()
 
 	return app, nil
 }
 
-func (app *AppWindow) StreamingRegistry() {
+func (app *AppWindow) streamingRegistry() {
 
 	for reg := range app.usecase.StreamRegistry() {
 		// log.Println(len(app.collectedResult))
@@ -106,18 +106,18 @@ func (app *AppWindow) StreamingRegistry() {
 	}
 }
 
-func (app *AppWindow) UpdatingTable() {
+func (app *AppWindow) updatingTable() {
 
 	ticker := time.NewTicker(UPDATE_INTERVAL)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		app.UpdateTable(false)
+		app.updateTable(false)
 	}
 
 }
 
-func (app *AppWindow) UpdateTable(invalidate bool) {
+func (app *AppWindow) updateTable(invalidate bool) {
 
 	app.Synchronize(func() {
 
@@ -135,4 +135,16 @@ func (app *AppWindow) UpdateTable(invalidate bool) {
 		}
 
 	})
+}
+
+func (app *AppWindow) handleOnItemActivated() {
+
+	index := app.resultTable.CurrentIndex()
+	if index < 0 {
+		return
+	}
+
+	item := app.regTableModel.Items[index]
+	go app.usecase.OpenInRegedit(item)
+
 }

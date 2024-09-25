@@ -2,7 +2,10 @@ package utils
 
 import (
 	"bytes"
+	"log"
+	"os/exec"
 	"strings"
+	"syscall"
 
 	"golang.org/x/sys/windows/registry"
 )
@@ -30,6 +33,10 @@ const (
 	STR_REG_QWORD                      string = "REG_QWORD"
 )
 
+const (
+	FLAG_CREATE_NO_WINDOW uint32 = 0x08000000
+)
+
 func BytesToString(b []byte) string {
 
 	n := bytes.Index(b, []byte{0, 0})
@@ -54,4 +61,28 @@ func KeyToString(key registry.Key) string {
 		return STR_HKEY_CURRENT_CONFIG
 	}
 	return ""
+}
+
+func OpenRegeditAtPath(path string) {
+
+	addLastKeyCmd := exec.Command("reg", "add", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit", "/v", "LastKey", "/t", "REG_SZ", "/d", path, "/f")
+	addLastKeyCmd.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: FLAG_CREATE_NO_WINDOW,
+	}
+
+	err := addLastKeyCmd.Run()
+	if err != nil {
+		log.Println("OpenRegeditAtPath failed to add last key", err.Error())
+	}
+
+	openRegeditCmd := exec.Command("cmd", "/c", "regedit", "/m")
+	openRegeditCmd.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: FLAG_CREATE_NO_WINDOW,
+	}
+
+	err = openRegeditCmd.Run()
+	if err != nil {
+		log.Println("OpenRegeditAtPath failed to open regedit", err.Error())
+	}
+
 }
