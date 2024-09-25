@@ -28,10 +28,10 @@ jobs:
       run: go install github.com/tc-hib/go-winres@latest
 
     - name: Make go-winres
-      run: go-winres make ./
+      run: go-winres make .
 
     - name: Build Executable
-      run: go build -o registry-finder-gui.exe -ldflags="-H windowsgui" ./main.go
+      run: go build -o registry-finder-gui.exe -ldflags="-H windowsgui" .
 
     - name: Upload Build
       uses: actions/upload-artifact@v4
