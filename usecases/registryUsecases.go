@@ -1,6 +1,8 @@
 package usecases
 
 import (
+	"strings"
+
 	"github.com/0736b/registry-finder-gui/entities"
 	"github.com/0736b/registry-finder-gui/repositories"
 	"github.com/0736b/registry-finder-gui/utils"
@@ -35,7 +37,17 @@ func (u *RegistryUsecaseImpl) StreamRegistry() <-chan *entities.Registry {
 
 func (u *RegistryUsecaseImpl) FilterByKeyword(reg *entities.Registry, keyword string) bool {
 
-	return true
+	if len(keyword) == 0 {
+		return true
+	}
+
+	keyword = strings.ToLower(keyword)
+	keyword = strings.ReplaceAll(keyword, " ", "")
+	keyword = strings.TrimSpace(keyword)
+
+	info := reg.Path + " " + reg.Name + " " + reg.Value
+
+	return strings.Contains(info, keyword)
 }
 
 func (u *RegistryUsecaseImpl) FilterByKey(reg *entities.Registry, filterKey string) bool {

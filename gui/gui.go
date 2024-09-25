@@ -18,9 +18,8 @@ const (
 	APP_WIDTH  int    = 1000
 	APP_HEIGHT int    = 800
 
-	DEBOUNCE_INTERVAL time.Duration = 300 * time.Millisecond
-	UPDATE_INTERVAL   time.Duration = 300 * time.Millisecond
-	MAX_SHOW_RESULT   int           = 1000
+	DEBOUNCE_INTERVAL time.Duration = 500 * time.Millisecond
+	UPDATE_INTERVAL   time.Duration = 500 * time.Millisecond
 
 	COL_TITLE_PATH  string = "Path"
 	COL_TITLE_NAME  string = "Name"
@@ -34,10 +33,18 @@ const (
 )
 
 type AppWindow struct {
-	usecase           usecases.RegistryUsecase
+	usecase usecases.RegistryUsecase
+
 	collectedResult   []*entities.Registry
 	collectedResultMu sync.Mutex
-	showedResult      []*entities.Registry
+
+	showedResult   []*entities.Registry
+	showedResultMu sync.Mutex
+	updateShowed   chan struct{}
+
+	debounce    *time.Timer
+	debounceMu  sync.Mutex
+	keywordChan chan string
 
 	*walk.MainWindow
 	searchBox *walk.LineEdit
@@ -51,7 +58,8 @@ type AppWindow struct {
 
 func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 
-	app := &AppWindow{usecase: usecase, collectedResult: make([]*entities.Registry, 0), showedResult: make([]*entities.Registry, 0), regTableModel: models.NewRegistryTableModel()}
+	app := &AppWindow{usecase: usecase, collectedResult: make([]*entities.Registry, 0), showedResult: make([]*entities.Registry, 0),
+		regTableModel: models.NewRegistryTableModel(), keywordChan: make(chan string), updateShowed: make(chan struct{}, 1)}
 
 	mw := MainWindow{
 
@@ -68,7 +76,7 @@ func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 			LineEdit{
 				AssignTo: &app.searchBox,
 				OnTextChanged: func() {
-					// TODO keyword changed, show result must change
+					app.handleOnKeywordChanged()
 				},
 			},
 			TableView{
@@ -94,6 +102,8 @@ func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 
 	go app.streamingRegistry()
 
+	go app.processingShowResult()
+
 	go app.updatingTable()
 
 	return app, nil
@@ -102,8 +112,49 @@ func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 func (app *AppWindow) streamingRegistry() {
 
 	for reg := range app.usecase.StreamRegistry() {
+		app.collectedResultMu.Lock()
 		app.collectedResult = append(app.collectedResult, reg)
+		app.collectedResultMu.Unlock()
 	}
+}
+
+func (app *AppWindow) processingShowResult() {
+
+	var prevKeyword string = ""
+	var currKeyword string = ""
+
+	for {
+		select {
+		case newKeyword := <-app.keywordChan:
+			prevKeyword = currKeyword
+			currKeyword = newKeyword
+			app.updateShowed <- struct{}{}
+		case <-time.After(UPDATE_INTERVAL):
+		}
+
+		go func() {
+
+			app.showedResultMu.Lock()
+			defer app.showedResultMu.Unlock()
+
+			app.showedResult = make([]*entities.Registry, 0)
+			for _, reg := range app.collectedResult {
+				if app.usecase.FilterByKeyword(reg, currKeyword) {
+					app.showedResult = append(app.showedResult, reg)
+				}
+			}
+
+			if prevKeyword != currKeyword {
+				select {
+				case app.updateShowed <- struct{}{}:
+					prevKeyword = currKeyword
+				default:
+				}
+			}
+
+		}()
+	}
+
 }
 
 func (app *AppWindow) updatingTable() {
@@ -111,30 +162,62 @@ func (app *AppWindow) updatingTable() {
 	ticker := time.NewTicker(UPDATE_INTERVAL)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		app.updateTable(false)
+	for {
+		select {
+		case <-ticker.C:
+			app.updateTable(false)
+		case <-app.updateShowed:
+			app.updateTable(true)
+		}
 	}
-
 }
 
 func (app *AppWindow) updateTable(invalidate bool) {
 
 	app.Synchronize(func() {
 
-		app.showedResult = make([]*entities.Registry, 0)
+		app.showedResultMu.Lock()
+		defer app.showedResultMu.Unlock()
 
-		app.collectedResultMu.Lock()
-		app.showedResult = append(app.showedResult, app.collectedResult...)
-		app.collectedResultMu.Unlock()
+		// app.showedResultMu.Lock()
+		// app.regTableModel.Items = app.showedResult
+		// log.Println("updateTable Items:", len(app.regTableModel.Items))
+		// app.showedResultMu.Unlock()
 
-		app.regTableModel.Items = app.showedResult
-		app.regTableModel.PublishRowsReset()
+		// app.regTableModel.PublishRowsReset()
 
 		if invalidate {
+			app.regTableModel.Items = app.showedResult
+			app.regTableModel.PublishRowsReset()
 			app.resultTable.Invalidate()
+		} else {
+			if len(app.showedResult) > len(app.regTableModel.Items) {
+				app.regTableModel.Items = app.showedResult
+				app.regTableModel.PublishRowsReset()
+			}
 		}
 
 	})
+}
+
+func (app *AppWindow) handleOnKeywordChanged() {
+
+	keyword := app.searchBox.Text()
+
+	app.debounceMu.Lock()
+	defer app.debounceMu.Unlock()
+
+	if app.debounce != nil {
+		app.debounce.Stop()
+	}
+
+	app.debounce = time.AfterFunc(DEBOUNCE_INTERVAL, func() {
+		select {
+		case app.keywordChan <- keyword:
+		default:
+		}
+	})
+
 }
 
 func (app *AppWindow) handleOnItemActivated() {
