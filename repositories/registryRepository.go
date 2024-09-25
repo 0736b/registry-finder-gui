@@ -3,7 +3,6 @@ package repositories
 import (
 	"fmt"
 	"log"
-	"slices"
 
 	"github.com/0736b/registry-finder-gui/entities"
 	"github.com/0736b/registry-finder-gui/utils"
@@ -117,15 +116,15 @@ func queryEnumKeys(hkey *registry.Key, path string, regChan chan *entities.Regis
 
 	// log.Println("queryEnumKeys", hkey)
 
-	hkeyStat, err := hkey.Stat()
+	_, err := hkey.Stat()
 	if err != nil {
 		regChan = nil
 		return
 	}
 
-	if hkeyStat.SubKeyCount == 0 {
-		queryEnumValues(hkey, path, regChan)
-	}
+	// if hkeyStat.SubKeyCount == 0 {
+	// 	queryEnumValues(hkey, path, regChan)
+	// }
 
 	subKeys, err := hkey.ReadSubKeyNames(-1)
 	if err != nil {
@@ -169,7 +168,7 @@ func queryEnumValues(hkey *registry.Key, path string, regChan chan *entities.Reg
 		val, valType, err := queryValue(hkey, name)
 		if err != nil {
 			log.Println("QueryEnumValues failed to query value", err.Error())
-			continue
+			return
 		}
 
 		regChan <- &entities.Registry{Path: path, Name: name, Type: valType, Value: val}
@@ -211,7 +210,7 @@ func queryValue(hkey *registry.Key, name string) (string, string, error) {
 		return strValue, utils.STR_REG_BINARY, nil
 
 	case registry.DWORD:
-		slices.Reverse(value)
+		// slices.Reverse(value)
 		strValue := fmt.Sprintf("0x%x", utils.BytesToString(value))
 		return strValue, utils.STR_REG_DWORD, nil
 
@@ -241,7 +240,7 @@ func queryValue(hkey *registry.Key, name string) (string, string, error) {
 		return strValue, utils.STR_REG_RESOURCE_REQUIREMENTS_LIST, nil
 
 	case registry.QWORD:
-		slices.Reverse(value)
+		// slices.Reverse(value)
 		strValue := fmt.Sprintf("%x", utils.BytesToString(value))
 		return strValue, utils.STR_REG_QWORD, nil
 

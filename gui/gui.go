@@ -60,7 +60,7 @@ func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 			LineEdit{
 				AssignTo: &app.searchBox,
 				OnTextChanged: func() {
-					// TODO keyword change
+					// TODO keyword changed, show result must change
 				},
 			},
 			TableView{
@@ -75,6 +75,9 @@ func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 				Model: app.regTableModel,
 				OnItemActivated: func() {
 					// TODO double-clicked to open regedit at item's key path
+				},
+				OnSizeChanged: func() {
+					// TODO adjust value column's size by app's size
 				},
 			},
 		},
@@ -108,11 +111,8 @@ func (app *AppWindow) UpdatingTable() {
 	ticker := time.NewTicker(UPDATE_INTERVAL)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			app.UpdateTable(false)
-		}
+	for range ticker.C {
+		app.UpdateTable(false)
 	}
 
 }
@@ -129,7 +129,10 @@ func (app *AppWindow) UpdateTable(invalidate bool) {
 
 		app.regTableModel.Items = app.showedResult
 		app.regTableModel.PublishRowsReset()
-		// app.resultTable.Invalidate()
+
+		if invalidate {
+			app.resultTable.Invalidate()
+		}
 
 	})
 }
