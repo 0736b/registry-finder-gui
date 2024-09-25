@@ -21,11 +21,8 @@ jobs:
     - name: Build Executable
       run: go build -a -ldflags="-s -w -H windowsgui -extldflags '-O2'" -o registry-finder-gui.exe ./main.go
 
-    - name: Compress Executable
-      run: Compress-Archive -Path registry-finder-gui.exe -DestinationPath registry-finder-gui.zip
-
     - name: Upload Build
       uses: actions/upload-artifact@v4
       with:
         name: registry-finder-gui
-        path: registry-finder-gui.zip
+        path: registry-finder-gui.exe
