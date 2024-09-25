@@ -69,14 +69,14 @@ func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 		MinSize:  Size{Width: APP_WIDTH, Height: APP_HEIGHT},
 		Layout:   VBox{},
 		OnSizeChanged: func() {
-			app.handleOnSizeChanged()
+			go app.handleOnSizeChanged()
 		},
 
 		Children: []Widget{
 			LineEdit{
 				AssignTo: &app.searchBox,
 				OnTextChanged: func() {
-					app.handleOnKeywordChanged()
+					go app.handleOnKeywordChanged()
 				},
 			},
 			TableView{
