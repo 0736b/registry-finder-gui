@@ -24,6 +24,12 @@ jobs:
     - name: Set Go Arch
       run: set GOARCH=amd64
 
+    - name: Install go-winres
+      run: go install github.com/tc-hib/go-winres@latest
+
+    - name: Make go-winres
+      run: go-winres make ./
+
     - name: Build Executable
       run: go build -o registry-finder-gui.exe -ldflags="-H windowsgui" ./main.go
 
