@@ -1,4 +1,10 @@
+<img src="winres/reg-finder.ico" align="right" height="70" />
+
 # Windows Registry Finder - GUI
+
+
+![reg-finder-ezgif com-optimize](https://github.com/user-attachments/assets/d8cfd0a3-bce5-4148-861f-85eac662701b)
+
 
 
 ### Features
