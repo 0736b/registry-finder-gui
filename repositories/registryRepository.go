@@ -72,12 +72,14 @@ func generateRegByKey(key registry.Key) <-chan *entities.Registry {
 		return nil
 	}
 
-	go queryEnumKeys(&hkey, utils.KeyToString(key), regChan)
+	keyStr := utils.KeyToString(&key)
+
+	go queryEnumKeys(&hkey, keyStr, regChan)
 
 	return regChan
 }
 
-func queryEnumKeys(hkey *registry.Key, path string, regChan chan *entities.Registry) {
+func queryEnumKeys(hkey *registry.Key, path *string, regChan chan *entities.Registry) {
 
 	_, err := hkey.Stat()
 	if err != nil {
@@ -93,12 +95,13 @@ func queryEnumKeys(hkey *registry.Key, path string, regChan chan *entities.Regis
 
 	for _, subkey := range subKeys {
 		_hkey, _ := registry.OpenKey(*hkey, subkey, registry.READ)
-		queryEnumKeys(&_hkey, path+"\\"+subkey, regChan)
+		nextPath := *path + "\\" + subkey
+		queryEnumKeys(&_hkey, &nextPath, regChan)
 	}
 
 }
 
-func queryEnumValues(hkey *registry.Key, path string, regChan chan *entities.Registry) {
+func queryEnumValues(hkey *registry.Key, path *string, regChan chan *entities.Registry) {
 
 	hkeyStat, err := hkey.Stat()
 	if err != nil {
@@ -106,7 +109,7 @@ func queryEnumValues(hkey *registry.Key, path string, regChan chan *entities.Reg
 	}
 
 	if hkeyStat.ValueCount == 0 {
-		regChan <- &entities.Registry{Path: path, Name: "", Type: "", Value: ""}
+		regChan <- &entities.Registry{Path: path, Name: &utils.STR_EMPTY, Type: &utils.STR_EMPTY, Value: &utils.STR_EMPTY}
 		return
 	}
 
@@ -117,31 +120,31 @@ func queryEnumValues(hkey *registry.Key, path string, regChan chan *entities.Reg
 		return
 	}
 
-	regChan <- &entities.Registry{Path: path, Name: "", Type: "", Value: ""}
+	regChan <- &entities.Registry{Path: path, Name: &utils.STR_EMPTY, Type: &utils.STR_EMPTY, Value: &utils.STR_EMPTY}
 
 	for _, name := range valNames {
 
-		val, valType, err := queryValue(hkey, name)
+		val, valType, err := queryValue(hkey, &name)
 		if err != nil {
 			log.Println("QueryEnumValues failed to query value", err.Error())
 			return
 		}
 
-		regChan <- &entities.Registry{Path: path, Name: name, Type: valType, Value: val}
+		regChan <- &entities.Registry{Path: path, Name: &name, Type: valType, Value: val}
 	}
 
 }
 
-func queryValue(hkey *registry.Key, name string) (string, string, error) {
+func queryValue(hkey *registry.Key, name *string) (*string, *string, error) {
 
 	value := make([]byte, 1024)
 
-	n, valType, err := hkey.GetValue(name, value)
+	n, valType, err := hkey.GetValue(*name, value)
 	if err != nil && err != registry.ErrShortBuffer {
-		return "", "", fmt.Errorf("QueryValue failed to get value: %w", err)
+		return nil, nil, fmt.Errorf("QueryValue failed to get value: %w", err)
 	} else if err != nil && err == registry.ErrShortBuffer {
 		value = make([]byte, n)
-		hkey.GetValue(name, value)
+		hkey.GetValue(*name, value)
 	}
 
 	value = value[:n]
@@ -149,56 +152,56 @@ func queryValue(hkey *registry.Key, name string) (string, string, error) {
 	switch valType {
 
 	case registry.NONE:
-		return "", utils.STR_NONE, nil
+		return &utils.STR_EMPTY, &utils.STR_NONE, nil
 
 	case registry.SZ:
 		strValue := utils.BytesToString(value)
-		return strValue, utils.STR_REG_SZ, nil
+		return strValue, &utils.STR_REG_SZ, nil
 
 	case registry.EXPAND_SZ:
 		strValue := utils.BytesToString(value)
-		return strValue, utils.STR_REG_EXPAND_SZ, nil
+		return strValue, &utils.STR_REG_EXPAND_SZ, nil
 
 	case registry.BINARY:
 		strValue := fmt.Sprintf("%x", value)
-		return strValue, utils.STR_REG_BINARY, nil
+		return &strValue, &utils.STR_REG_BINARY, nil
 
 	case registry.DWORD:
 		// slices.Reverse(value)
 		strValue := fmt.Sprintf("0x%x", utils.BytesToString(value))
-		return strValue, utils.STR_REG_DWORD, nil
+		return &strValue, &utils.STR_REG_DWORD, nil
 
 	case registry.DWORD_BIG_ENDIAN:
 		strValue := fmt.Sprintf("0x%x", utils.BytesToString(value))
-		return strValue, utils.STR_REG_DWORD_BIG_ENDIAN, nil
+		return &strValue, &utils.STR_REG_DWORD_BIG_ENDIAN, nil
 
 	case registry.LINK:
 		strValue := utils.BytesToString(value)
-		return strValue, utils.STR_REG_LINK, nil
+		return strValue, &utils.STR_REG_LINK, nil
 
 	case registry.MULTI_SZ:
-		val, _, _ := hkey.GetStringsValue(name)
+		val, _, _ := hkey.GetStringsValue(*name)
 		strValue := fmt.Sprintf("%s", val)
-		return strValue, utils.STR_REG_MULTI_SZ, nil
+		return &strValue, &utils.STR_REG_MULTI_SZ, nil
 
 	case registry.RESOURCE_LIST:
 		strValue := utils.BytesToString(value)
-		return strValue, utils.STR_REG_RESOURCE_LIST, nil
+		return strValue, &utils.STR_REG_RESOURCE_LIST, nil
 
 	case registry.FULL_RESOURCE_DESCRIPTOR:
 		strValue := fmt.Sprintf("%x", value)
-		return strValue, utils.STR_REG_FULL_RESOURCE_DESCRIPTOR, nil
+		return &strValue, &utils.STR_REG_FULL_RESOURCE_DESCRIPTOR, nil
 
 	case registry.RESOURCE_REQUIREMENTS_LIST:
 		strValue := utils.BytesToString(value)
-		return strValue, utils.STR_REG_RESOURCE_REQUIREMENTS_LIST, nil
+		return strValue, &utils.STR_REG_RESOURCE_REQUIREMENTS_LIST, nil
 
 	case registry.QWORD:
 		// slices.Reverse(value)
 		strValue := fmt.Sprintf("%x", utils.BytesToString(value))
-		return strValue, utils.STR_REG_QWORD, nil
+		return &strValue, &utils.STR_REG_QWORD, nil
 
 	}
 
-	return "", "", fmt.Errorf("queryValue error: %w", err)
+	return &utils.STR_EMPTY, &utils.STR_EMPTY, fmt.Errorf("queryValue error: %w", err)
 }

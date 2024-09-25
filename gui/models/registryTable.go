@@ -28,13 +28,13 @@ func (m *RegistryTableModel) Value(row, col int) interface{} {
 
 	switch col {
 	case 0:
-		return item.Path
+		return *item.Path
 	case 1:
-		return item.Name
+		return *item.Name
 	case 2:
-		return item.Type
+		return *item.Type
 	case 3:
-		return item.Value
+		return *item.Value
 	}
 
 	panic("unexpected col")

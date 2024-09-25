@@ -45,7 +45,7 @@ func (u *RegistryUsecaseImpl) FilterByKeyword(reg *entities.Registry, keyword st
 	keyword = strings.ReplaceAll(keyword, " ", "")
 	keyword = strings.TrimSpace(keyword)
 
-	info := reg.Path + " " + reg.Name + " " + reg.Value
+	info := *reg.Path + " " + *reg.Name + " " + *reg.Value
 
 	return strings.Contains(info, keyword)
 }

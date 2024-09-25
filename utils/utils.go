@@ -10,7 +10,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-const (
+var (
 	STR_HKEY_CLASSES_ROOT   string = "HKEY_CLASSES_ROOT"
 	STR_HKEY_CURRENT_USER   string = "HKEY_CURRENT_USER"
 	STR_HKEY_LOCAL_MACHINE  string = "HKEY_LOCAL_MACHINE"
@@ -18,7 +18,7 @@ const (
 	STR_HKEY_CURRENT_CONFIG string = "HKEY_CURRENT_CONFIG"
 )
 
-const (
+var (
 	STR_NONE                           string = "NONE"
 	STR_REG_SZ                         string = "REG_SZ"
 	STR_REG_EXPAND_SZ                  string = "REG_EXPAND_SZ"
@@ -31,41 +31,49 @@ const (
 	STR_REG_FULL_RESOURCE_DESCRIPTOR   string = "REG_FULL_RESOURCE_DESCRIPTOR"
 	STR_REG_RESOURCE_REQUIREMENTS_LIST string = "REG_RESOURCE_REQUIREMENTS_LIST"
 	STR_REG_QWORD                      string = "REG_QWORD"
+
+	STR_EMPTY string = ""
 )
 
 const (
 	FLAG_CREATE_NO_WINDOW uint32 = 0x08000000
 )
 
-func BytesToString(b []byte) string {
+func BytesToString(b []byte) *string {
 
 	n := bytes.Index(b, []byte{0, 0})
 	if n == -1 {
 		n = len(b)
 	}
-	return strings.ReplaceAll(string(b[:n]), "\x00", "") // clean unexpected null characters
+
+	// clean unexpected null characters
+	resultStr := strings.ReplaceAll(string(b[:n]), "\x00", "")
+
+	return &resultStr
 }
 
-func KeyToString(key registry.Key) string {
+func KeyToString(key *registry.Key) *string {
 
-	switch key {
+	switch *key {
 	case registry.CLASSES_ROOT:
-		return STR_HKEY_CLASSES_ROOT
+		return &STR_HKEY_CLASSES_ROOT
 	case registry.CURRENT_USER:
-		return STR_HKEY_CURRENT_USER
+		return &STR_HKEY_CURRENT_USER
 	case registry.LOCAL_MACHINE:
-		return STR_HKEY_LOCAL_MACHINE
+		return &STR_HKEY_LOCAL_MACHINE
 	case registry.USERS:
-		return STR_HKEY_USERS
+		return &STR_HKEY_USERS
 	case registry.CURRENT_CONFIG:
-		return STR_HKEY_CURRENT_CONFIG
+		return &STR_HKEY_CURRENT_CONFIG
 	}
-	return ""
+	return &STR_EMPTY
 }
 
-func OpenRegeditAtPath(path string) {
+func OpenRegeditAtPath(path *string) {
 
-	addLastKeyCmd := exec.Command("reg", "add", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit", "/v", "LastKey", "/t", "REG_SZ", "/d", path, "/f")
+	addLastKeyCmd := exec.Command("reg", "add",
+		"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit", "/v",
+		"LastKey", "/t", "REG_SZ", "/d", *path, "/f")
 	addLastKeyCmd.SysProcAttr = &syscall.SysProcAttr{
 		CreationFlags: FLAG_CREATE_NO_WINDOW,
 	}
