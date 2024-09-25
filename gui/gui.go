@@ -48,10 +48,13 @@ type AppWindow struct {
 
 	*walk.MainWindow
 	searchBox *walk.LineEdit
+
+	// TODO filters by key and type
 	// keyCheckBox  *walk.CheckBox
 	// typeCheckBox *walk.CheckBox
 	// keyComboBox  *walk.ComboBox
 	// typeComboBox *walk.ComboBox
+
 	resultTable   *walk.TableView
 	regTableModel *models.RegistryTableModel
 }
@@ -127,33 +130,40 @@ func (app *AppWindow) processingShowResult() {
 
 		select {
 		case newKeyword := <-app.keywordChan:
-			prevKeyword = currKeyword
-			currKeyword = newKeyword
-			app.updateShowed <- struct{}{}
+			if newKeyword != currKeyword {
+				prevKeyword = currKeyword
+				currKeyword = newKeyword
+			}
 		case <-time.After(UPDATE_INTERVAL):
 		}
 
-		go func() {
+		go func(keyword string) {
 
-			app.showedResultMu.Lock()
-			defer app.showedResultMu.Unlock()
+			app.collectedResultMu.Lock()
+			collectedCopy := make([]*entities.Registry, len(app.collectedResult))
+			copy(collectedCopy, app.collectedResult)
+			app.collectedResultMu.Unlock()
 
-			app.showedResult = make([]*entities.Registry, 0)
-			for _, reg := range app.collectedResult {
-				if app.usecase.FilterByKeyword(reg, currKeyword) {
-					app.showedResult = append(app.showedResult, reg)
+			filtered := make([]*entities.Registry, 0, len(collectedCopy))
+			for _, reg := range collectedCopy {
+				if app.usecase.FilterByKeyword(reg, keyword) {
+					filtered = append(filtered, reg)
 				}
 			}
 
-			if prevKeyword != currKeyword {
+			app.showedResultMu.Lock()
+			app.showedResult = filtered
+			app.showedResultMu.Unlock()
+
+			if prevKeyword != keyword {
 				select {
 				case app.updateShowed <- struct{}{}:
-					prevKeyword = currKeyword
+					prevKeyword = keyword
 				default:
 				}
 			}
 
-		}()
+		}(currKeyword)
 
 	}
 
@@ -179,15 +189,17 @@ func (app *AppWindow) updateTable(invalidate bool) {
 	app.Synchronize(func() {
 
 		app.showedResultMu.Lock()
-		defer app.showedResultMu.Unlock()
+		showedCopy := make([]*entities.Registry, len(app.showedResult))
+		copy(showedCopy, app.showedResult)
+		app.showedResultMu.Unlock()
 
 		if invalidate {
-			app.regTableModel.Items = app.showedResult
+			app.regTableModel.Items = showedCopy
 			app.regTableModel.PublishRowsReset()
 			app.resultTable.Invalidate()
 		} else {
-			if len(app.showedResult) > len(app.regTableModel.Items) {
-				app.regTableModel.Items = app.showedResult
+			if len(showedCopy) > len(app.regTableModel.Items) {
+				app.regTableModel.Items = showedCopy
 				app.regTableModel.PublishRowsReset()
 			}
 		}

@@ -20,6 +20,7 @@ func NewRegistryRepository() *RegistryRepositoryImpl {
 	return &RegistryRepositoryImpl{}
 }
 
+// TODO logic/performance improving on all related to this
 func (r *RegistryRepositoryImpl) StreamRegistry() <-chan *entities.Registry {
 
 	genByHKCR := generateRegByKey(registry.CLASSES_ROOT)
@@ -132,6 +133,7 @@ func queryEnumValues(hkey *registry.Key, path string, regChan chan *entities.Reg
 
 }
 
+// TODO make value string look like in Regedit
 func queryValue(hkey *registry.Key, name string) (string, string, error) {
 
 	value := make([]byte, 1024)
@@ -164,7 +166,6 @@ func queryValue(hkey *registry.Key, name string) (string, string, error) {
 		return strValue, utils.STR_REG_BINARY, nil
 
 	case registry.DWORD:
-		// slices.Reverse(value)
 		strValue := fmt.Sprintf("0x%x", utils.BytesToString(value))
 		return strValue, utils.STR_REG_DWORD, nil
 
@@ -194,11 +195,10 @@ func queryValue(hkey *registry.Key, name string) (string, string, error) {
 		return strValue, utils.STR_REG_RESOURCE_REQUIREMENTS_LIST, nil
 
 	case registry.QWORD:
-		// slices.Reverse(value)
 		strValue := fmt.Sprintf("%x", utils.BytesToString(value))
 		return strValue, utils.STR_REG_QWORD, nil
 
 	}
 
-	return "", "", fmt.Errorf("queryValue error: %w", err)
+	return "", "", nil
 }
