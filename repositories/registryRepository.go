@@ -48,41 +48,31 @@ func fanInRegistry(hkcr, hkcu, hklm, hkcc, hku <-chan *entities.Registry) <-chan
 				if !ok {
 					hkcr = nil
 				}
-				if reg != nil {
-					resultsChan <- reg
-				}
+				resultsChan <- reg
 
 			case reg, ok := <-hkcu:
 				if !ok {
 					hkcu = nil
 				}
-				if reg != nil {
-					resultsChan <- reg
-				}
+				resultsChan <- reg
 
 			case reg, ok := <-hklm:
 				if !ok {
 					hklm = nil
 				}
-				if reg != nil {
-					resultsChan <- reg
-				}
+				resultsChan <- reg
 
 			case reg, ok := <-hkcc:
 				if !ok {
 					hkcc = nil
 				}
-				if reg != nil {
-					resultsChan <- reg
-				}
+				resultsChan <- reg
 
 			case reg, ok := <-hku:
 				if !ok {
 					hku = nil
 				}
-				if reg != nil {
-					resultsChan <- reg
-				}
+				resultsChan <- reg
 
 			}
 		}
@@ -118,7 +108,7 @@ func queryEnumKeys(hkey *registry.Key, path string, regChan chan *entities.Regis
 
 	_, err := hkey.Stat()
 	if err != nil {
-		regChan = nil
+		// regChan = nil
 		return
 	}
 
@@ -128,7 +118,7 @@ func queryEnumKeys(hkey *registry.Key, path string, regChan chan *entities.Regis
 
 	subKeys, err := hkey.ReadSubKeyNames(-1)
 	if err != nil {
-		regChan = nil
+		// regChan = nil
 		return
 	}
 
