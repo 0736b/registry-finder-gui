@@ -26,3 +26,5 @@
 ```
 go build -a -ldflags="-s -w -H windowsgui -extldflags '-O2'" .
 ```
+
+> don't specific build package target to `./main.go` it will make go builder not pick up the `rsrc.syso` so build executable can't run  
