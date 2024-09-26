@@ -19,6 +19,7 @@ const (
 )
 
 const (
+	STR_EMPTY                          string = ""
 	STR_NONE                           string = "NONE"
 	STR_REG_SZ                         string = "REG_SZ"
 	STR_REG_EXPAND_SZ                  string = "REG_EXPAND_SZ"
@@ -46,6 +47,49 @@ func BytesToString(b []byte) string {
 	return strings.ReplaceAll(string(b[:n]), "\x00", "") // clean unexpected null characters
 }
 
+func GetTypeString(valType uint32) string {
+
+	switch valType {
+	case registry.SZ:
+		return STR_REG_SZ
+	case registry.EXPAND_SZ:
+		return STR_REG_EXPAND_SZ
+	case registry.BINARY:
+		return STR_REG_BINARY
+	case registry.DWORD:
+		return STR_REG_DWORD
+	case registry.DWORD_BIG_ENDIAN:
+		return STR_REG_DWORD_BIG_ENDIAN
+	case registry.LINK:
+		return STR_REG_LINK
+	case registry.MULTI_SZ:
+		return STR_REG_MULTI_SZ
+	case registry.RESOURCE_LIST:
+		return STR_REG_RESOURCE_LIST
+	case registry.FULL_RESOURCE_DESCRIPTOR:
+		return STR_REG_FULL_RESOURCE_DESCRIPTOR
+	case registry.RESOURCE_REQUIREMENTS_LIST:
+		return STR_REG_RESOURCE_REQUIREMENTS_LIST
+	case registry.QWORD:
+		return STR_REG_QWORD
+	case registry.NONE:
+		return STR_NONE
+	default:
+		return STR_EMPTY
+	}
+}
+
+func MultiSZToStringSlice(value []byte) []string {
+
+	var result []string
+	for _, s := range bytes.Split(value, []byte{0, 0}) {
+		if len(s) > 0 {
+			result = append(result, BytesToString(s))
+		}
+	}
+	return result
+}
+
 func KeyToString(key registry.Key) string {
 
 	switch key {
@@ -59,8 +103,14 @@ func KeyToString(key registry.Key) string {
 		return STR_HKEY_USERS
 	case registry.CURRENT_CONFIG:
 		return STR_HKEY_CURRENT_CONFIG
+	default:
+		return STR_EMPTY
 	}
-	return ""
+}
+
+func PreProcessStr(s string) string {
+
+	return strings.ToLower(strings.ReplaceAll(s, " ", ""))
 }
 
 func OpenRegeditAtPath(path string) {
@@ -84,5 +134,4 @@ func OpenRegeditAtPath(path string) {
 	if err != nil {
 		log.Println("OpenRegeditAtPath failed to open regedit", err.Error())
 	}
-
 }

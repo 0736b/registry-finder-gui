@@ -1,8 +1,10 @@
 package repositories
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 
 	"github.com/0736b/registry-finder-gui/entities"
@@ -133,72 +135,56 @@ func queryEnumValues(hkey *registry.Key, path string, regChan chan *entities.Reg
 
 }
 
-// TODO make value string look like in Regedit
 func queryValue(hkey *registry.Key, name string) (string, string, error) {
 
-	value := make([]byte, 1024)
-
-	n, valType, err := hkey.GetValue(name, value)
-	if err != nil && err != registry.ErrShortBuffer {
-		return "", "", fmt.Errorf("%w", err)
-	} else if err != nil && err == registry.ErrShortBuffer {
-		value = make([]byte, n)
-		hkey.GetValue(name, value)
+	n, valType, err := hkey.GetValue(name, nil)
+	if err != nil {
+		if err == registry.ErrNotExist {
+			return "", "", fmt.Errorf("value does not exist: %w", err)
+		}
+		return "", "", fmt.Errorf("failed to get value info: %w", err)
 	}
 
-	value = value[:n]
+	buf := make([]byte, n)
+	_, _, err = hkey.GetValue(name, buf)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get value data: %w", err)
+	}
+
+	var strValue string
+	var typeStr string
 
 	switch valType {
-
 	case registry.NONE:
-		return "", utils.STR_NONE, nil
-
-	case registry.SZ:
-		strValue := utils.BytesToString(value)
-		return strValue, utils.STR_REG_SZ, nil
-
-	case registry.EXPAND_SZ:
-		strValue := utils.BytesToString(value)
-		return strValue, utils.STR_REG_EXPAND_SZ, nil
-
-	case registry.BINARY:
-		strValue := fmt.Sprintf("%x", value)
-		return strValue, utils.STR_REG_BINARY, nil
-
+		typeStr = utils.STR_NONE
+	case registry.SZ, registry.EXPAND_SZ, registry.LINK:
+		strValue = utils.BytesToString(buf)
+		typeStr = utils.GetTypeString(valType)
+	case registry.BINARY, registry.FULL_RESOURCE_DESCRIPTOR:
+		strValue = fmt.Sprintf("%x", buf)
+		typeStr = utils.GetTypeString(valType)
 	case registry.DWORD:
-		strValue := fmt.Sprintf("0x%x", utils.BytesToString(value))
-		return strValue, utils.STR_REG_DWORD, nil
-
+		if len(buf) >= 4 {
+			strValue = fmt.Sprintf("0x%08x", binary.LittleEndian.Uint32(buf))
+		}
+		typeStr = utils.STR_REG_DWORD
 	case registry.DWORD_BIG_ENDIAN:
-		strValue := fmt.Sprintf("0x%x", utils.BytesToString(value))
-		return strValue, utils.STR_REG_DWORD_BIG_ENDIAN, nil
-
-	case registry.LINK:
-		strValue := utils.BytesToString(value)
-		return strValue, utils.STR_REG_LINK, nil
-
-	case registry.MULTI_SZ:
-		val, _, _ := hkey.GetStringsValue(name)
-		strValue := fmt.Sprintf("%s", val)
-		return strValue, utils.STR_REG_MULTI_SZ, nil
-
-	case registry.RESOURCE_LIST:
-		strValue := utils.BytesToString(value)
-		return strValue, utils.STR_REG_RESOURCE_LIST, nil
-
-	case registry.FULL_RESOURCE_DESCRIPTOR:
-		strValue := fmt.Sprintf("%x", value)
-		return strValue, utils.STR_REG_FULL_RESOURCE_DESCRIPTOR, nil
-
-	case registry.RESOURCE_REQUIREMENTS_LIST:
-		strValue := utils.BytesToString(value)
-		return strValue, utils.STR_REG_RESOURCE_REQUIREMENTS_LIST, nil
-
+		if len(buf) >= 4 {
+			strValue = fmt.Sprintf("0x%08x", binary.BigEndian.Uint32(buf))
+		}
+		typeStr = utils.STR_REG_DWORD_BIG_ENDIAN
 	case registry.QWORD:
-		strValue := fmt.Sprintf("%x", utils.BytesToString(value))
-		return strValue, utils.STR_REG_QWORD, nil
-
+		if len(buf) >= 8 {
+			strValue = fmt.Sprintf("0x%016x", binary.LittleEndian.Uint64(buf))
+		}
+		typeStr = utils.STR_REG_QWORD
+	case registry.MULTI_SZ:
+		strValue = strings.Join(utils.MultiSZToStringSlice(buf), ", ")
+		typeStr = utils.STR_REG_MULTI_SZ
+	default:
+		strValue = string(buf)
+		typeStr = utils.GetTypeString(valType)
 	}
 
-	return "", "", nil
+	return strValue, typeStr, nil
 }
