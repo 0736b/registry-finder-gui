@@ -3,7 +3,8 @@
 # Windows Registry Finder - GUI
 
 
-![reg-finder-ezgif com-optimize](https://github.com/user-attachments/assets/d8cfd0a3-bce5-4148-861f-85eac662701b)
+
+![filter-video-ezgif com-optimize](https://github.com/user-attachments/assets/e1b049fc-667b-4dd6-aa20-a436b10f57f7)
 
 
 
