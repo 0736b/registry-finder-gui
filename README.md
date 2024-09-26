@@ -19,7 +19,6 @@
 ### TODO
 
 - Improving resource usage and performance
-- Improving UI to show value exactly the same we see in `Regedit`
 
 
 ### Build
