@@ -16,11 +16,6 @@
 - [x] Double-clicked to open target registry in `Regedit`
 
 
-### TODO
-
-- Improving resource usage and performance
-
-
 ### Build
 
 ```
