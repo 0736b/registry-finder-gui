@@ -26,6 +26,9 @@ var (
 
 	keywordCache   = make(map[string]string)
 	keywordCacheMu sync.RWMutex
+
+	toLowerCache   = make(map[string]string)
+	toLowerCacheMu sync.RWMutex
 )
 
 func NewRegistryUsecase() *RegistryUsecaseImpl {
@@ -47,20 +50,31 @@ func (u *RegistryUsecaseImpl) FilterByKeyword(reg *entities.Registry, keyword st
 		return true
 	}
 
+	regStr := reg.Path + reg.Name
+
 	keywordCacheMu.RLock()
-	processedKeyword, exists := keywordCache[keyword]
+	processedKeyword, keyExists := keywordCache[keyword]
 	keywordCacheMu.RUnlock()
 
-	if !exists {
+	toLowerCacheMu.RLock()
+	processedReg, regExists := toLowerCache[regStr]
+	toLowerCacheMu.RUnlock()
+
+	if !keyExists {
 		processedKeyword = utils.PreProcessStr(keyword)
 		keywordCacheMu.Lock()
 		keywordCache[keyword] = processedKeyword
 		keywordCacheMu.Unlock()
 	}
 
-	return strings.Contains(utils.PreProcessStr(reg.Path), processedKeyword) ||
-		strings.Contains(utils.PreProcessStr(reg.Name), processedKeyword) ||
-		strings.Contains(utils.PreProcessStr(reg.Value), processedKeyword)
+	if !regExists {
+		processedReg = utils.PreProcessStr(regStr + reg.Value)
+		toLowerCacheMu.Lock()
+		toLowerCache[regStr] = processedReg
+		toLowerCacheMu.Unlock()
+	}
+
+	return strings.Contains(processedReg, processedKeyword)
 }
 
 func (u *RegistryUsecaseImpl) FilterByKey(reg *entities.Registry, filterKey string) bool {
