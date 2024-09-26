@@ -19,7 +19,7 @@ const (
 	APP_HEIGHT int    = 800
 
 	DEBOUNCE_INTERVAL time.Duration = 250 * time.Millisecond
-	UPDATE_INTERVAL   time.Duration = 250 * time.Millisecond
+	UPDATE_INTERVAL   time.Duration = 500 * time.Millisecond
 
 	COL_TITLE_PATH  string = "Path"
 	COL_TITLE_NAME  string = "Name"

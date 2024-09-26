@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/0736b/registry-finder-gui/entities"
 	"github.com/0736b/registry-finder-gui/repositories"
@@ -20,7 +21,12 @@ type RegistryUsecaseImpl struct {
 	registryRepository repositories.RegistryRepository
 }
 
-var singletonRegistryRepository repositories.RegistryRepository = nil
+var (
+	singletonRegistryRepository repositories.RegistryRepository = nil
+
+	keywordCache   = make(map[string]string)
+	keywordCacheMu sync.RWMutex
+)
 
 func NewRegistryUsecase() *RegistryUsecaseImpl {
 
@@ -37,25 +43,24 @@ func (u *RegistryUsecaseImpl) StreamRegistry() <-chan *entities.Registry {
 
 func (u *RegistryUsecaseImpl) FilterByKeyword(reg *entities.Registry, keyword string) bool {
 
-	if len(keyword) == 0 {
+	if keyword == "" {
 		return true
 	}
 
-	keyword = strings.ToLower(strings.TrimSpace(strings.ReplaceAll(keyword, " ", "")))
+	keywordCacheMu.RLock()
+	processedKeyword, exists := keywordCache[keyword]
+	keywordCacheMu.RUnlock()
 
-	if strings.Contains(strings.ToLower(strings.ReplaceAll(reg.Path, " ", "")), keyword) {
-		return true
+	if !exists {
+		processedKeyword = utils.PreProcessStr(keyword)
+		keywordCacheMu.Lock()
+		keywordCache[keyword] = processedKeyword
+		keywordCacheMu.Unlock()
 	}
 
-	if strings.Contains(strings.ToLower(strings.ReplaceAll(reg.Name, " ", "")), keyword) {
-		return true
-	}
-
-	if strings.Contains(strings.ToLower(strings.ReplaceAll(reg.Value, " ", "")), keyword) {
-		return true
-	}
-
-	return false
+	return strings.Contains(utils.PreProcessStr(reg.Path), processedKeyword) ||
+		strings.Contains(utils.PreProcessStr(reg.Name), processedKeyword) ||
+		strings.Contains(utils.PreProcessStr(reg.Value), processedKeyword)
 }
 
 func (u *RegistryUsecaseImpl) FilterByKey(reg *entities.Registry, filterKey string) bool {
