@@ -49,11 +49,13 @@ type AppWindow struct {
 	*walk.MainWindow
 	searchBox *walk.LineEdit
 
-	// TODO filters by key and type
-	// keyCheckBox  *walk.CheckBox
-	// typeCheckBox *walk.CheckBox
-	// keyComboBox  *walk.ComboBox
-	// typeComboBox *walk.ComboBox
+	keyCheckBox  *walk.CheckBox
+	typeCheckBox *walk.CheckBox
+	keyComboBox  *walk.ComboBox
+	typeComboBox *walk.ComboBox
+
+	regKeyModel  *[]string
+	regTypeModel *[]string
 
 	resultTable   *walk.TableView
 	regTableModel *models.RegistryTableModel
@@ -62,7 +64,10 @@ type AppWindow struct {
 func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 
 	app := &AppWindow{usecase: usecase, collectedResult: make([]*entities.Registry, 0), showedResult: make([]*entities.Registry, 0),
-		regTableModel: models.NewRegistryTableModel(), keywordChan: make(chan string), updateShowed: make(chan bool)}
+		regTableModel: models.NewRegistryTableModel(), keywordChan: make(chan string), updateShowed: make(chan bool),
+		regKeyModel:  models.NewRegistryKeyModel(),
+		regTypeModel: models.NewRegistryTypeModel(),
+	}
 
 	var icon, _ = walk.NewIconFromResourceId(2)
 
@@ -78,12 +83,54 @@ func NewAppWindow(usecase usecases.RegistryUsecase) (*AppWindow, error) {
 		},
 
 		Children: []Widget{
+
 			LineEdit{
 				AssignTo: &app.searchBox,
 				OnTextChanged: func() {
 					go app.handleOnKeywordChanged()
 				},
 			},
+
+			Composite{
+				Layout: HBox{},
+				Children: []Widget{
+					CheckBox{
+						AssignTo:       &app.keyCheckBox,
+						Text:           "Filter Key",
+						TextOnLeftSide: true,
+						OnClicked: func() {
+							// TODO
+						},
+					},
+					ComboBox{
+						AssignTo:     &app.keyComboBox,
+						Editable:     true,
+						Model:        *app.regKeyModel,
+						CurrentIndex: 0,
+						OnCurrentIndexChanged: func() {
+							// TODO
+						},
+					},
+					CheckBox{
+						AssignTo:       &app.typeCheckBox,
+						Text:           "Filter Type",
+						TextOnLeftSide: true,
+						OnClicked: func() {
+							// TODO
+						},
+					},
+					ComboBox{
+						AssignTo:     &app.typeComboBox,
+						Editable:     true,
+						Model:        *app.regTypeModel,
+						CurrentIndex: 0,
+						OnCurrentIndexChanged: func() {
+							// TODO
+						},
+					},
+				},
+			},
+
 			TableView{
 				AssignTo:         &app.resultTable,
 				AlternatingRowBG: true,

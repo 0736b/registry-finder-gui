@@ -60,12 +60,12 @@ func (u *RegistryUsecaseImpl) FilterByKeyword(reg *entities.Registry, keyword st
 
 func (u *RegistryUsecaseImpl) FilterByKey(reg *entities.Registry, filterKey string) bool {
 
-	return true
+	return strings.Contains(reg.Path, filterKey)
 }
 
 func (u *RegistryUsecaseImpl) FilterByType(reg *entities.Registry, filterType string) bool {
 
-	return true
+	return reg.Type == filterType
 }
 
 func (u *RegistryUsecaseImpl) OpenInRegedit(reg *entities.Registry) {
