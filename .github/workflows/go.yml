@@ -33,6 +33,12 @@ jobs:
     - name: Build Executable
       run: go build -a -o registry-finder-gui.exe -gcflags=all="-l -B" -ldflags="-s -w -H windowsgui -extldflags '-O2'" .
 
+    - name: Install UPX
+      run: choco install upx
+
+    - name: Compress Executable with UPX
+      run: upx --best --ultra-brute registry-finder-gui.exe
+
     - name: Upload Build
       uses: actions/upload-artifact@v4
       with:
